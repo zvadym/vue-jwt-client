@@ -43,7 +43,7 @@ export default {
   },
   actions: {
     login({ commit, dispatch }, credentials) {
-      axios
+      return axios
         .post(process.env.VUE_APP_API_LOGIN_URL, {
           username: credentials.email,
           password: credentials.password
@@ -66,15 +66,18 @@ export default {
         .catch(() => {}) // See axios config for basic error handling
     },
     logout({ commit, state }) {
-      axios.post(process.env.VUE_APP_API_LOGOUT_URL, {
-        refresh: state.jwtRefresh
-      })
-      // commit('clearAuthCredentials')
-      // commit('clearUserData')
+      axios
+        .post(process.env.VUE_APP_API_LOGOUT_URL, {
+          refresh: state.jwtRefresh
+        })
+        .then(() => {
+          commit('clearAuthCredentials')
+          commit('clearUserData')
+          window.localStorage.removeItem('auth_refresh_token')
 
-      // bus.$emit('flash', 'Goodbye! Your session has ended.', 'success')
-      // window.localStorage.removeItem('auth_refresh_token')
-      // router.push({ name: 'Login' })
+          bus.$emit('flash', 'Goodbye! Your session has ended.', 'success')
+          router.push({ name: 'Login' })
+        })
     },
     refresh({ commit, state }) {
       const refreshToken = state.jwtRefresh

@@ -8,7 +8,7 @@
             class="block text-grey font-bold md:text-right mb-1 md:mb-0 pr-4"
             for="inline-full-name"
           >
-            Email
+            Username
           </label>
         </div>
         <div class="md:w-2/3">
@@ -78,7 +78,9 @@ export default {
     },
     login() {
       this.clearFormErrors()
-      this.$store.dispatch('auth/login', this.credentials)
+      this.$store.dispatch('auth/login', this.credentials).catch(error => {
+        console.log('Error:', error)
+      })
     },
     resetForm() {
       this.credentials = {

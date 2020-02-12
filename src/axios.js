@@ -33,14 +33,12 @@ customized.interceptors.response.use(
   response => response,
   error => {
     if (error.response.status === 401) {
-      router.push({ name: 'Login' })
       store.commit('auth/clearAuthCredentials')
+      router.push({ name: 'Login' }).catch(error => {})
     }
     if (error.response.status > 400) {
-      if (
-        Object.prototype.hasOwnProperty.call(error.response.data, 'message')
-      ) {
-        bus.$emit('flash', error.response.data.message, 'danger')
+      if (Object.prototype.hasOwnProperty.call(error.response.data, 'detail')) {
+        bus.$emit('flash', error.response.data.detail, 'danger')
       }
       if (Object.prototype.hasOwnProperty.call(error.response.data, 'errors')) {
         store.commit('auth/setFormErrors', error.response.data.errors)
