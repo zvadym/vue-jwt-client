@@ -6,129 +6,176 @@ import router from '@/router'
 export default {
   namespaced: true,
   state: {
-    jsonWebToken: null,
-    userEmail: null,
-    userName: null,
+    jwtAccess: null,
+    jwtRefresh: null,
+
+    timeoutId: null,
+
+    userData: null,
     formErrors: {}
   },
   mutations: {
-    setAuthCredentials (state, authData) {
-      state.jsonWebToken = authData.token
+    setAccessToken(state, token) {
+      state.jwtAccess = token
     },
-    clearAuthCredentials (state) {
-      state.jsonWebToken = null
+    setRefreshToken(state, token) {
+      state.jwtRefresh = token
     },
-    setFormErrors (state, errors) {
+    clearAuthCredentials(state) {
+      state.jwtAccess = null
+      state.jwtRefresh = null
+    },
+    updateTimeoutId(state, timeoutId) {
+      state.timeoutId = timeoutId
+    },
+    setFormErrors(state, errors) {
       state.formErrors = errors
     },
-    clearFormErrors (state) {
+    clearFormErrors(state) {
       state.formErrors = {}
     },
-    setUserEmail (state, email) {
-      state.userEmail = email
+    setUserData(state, data) {
+      state.userData = data
     },
-    clearUserEmail (state) {
-      state.userEmail = null
-    },
-    setUserName (state, name) {
-      state.userName = name
-    },
-    clearUserName (state) {
-      state.userName = null
+    clearUserData(state) {
+      state.userData = null
     }
   },
   actions: {
-    login ({ commit, dispatch }, credentials) {
-      axios.post(
-        process.env.VUE_APP_API_LOGIN_URL,
-        { email: credentials.email, password: credentials.password })
-        .then((response) => {
-          const token = response.data.token
-          const decoded = jwtDecode(token)
-          const expirationDate = new Date(decoded.exp * 1000)
+    login({ commit, dispatch }, credentials) {
+      axios
+        .post(process.env.VUE_APP_API_LOGIN_URL, {
+          username: credentials.email,
+          password: credentials.password
+        })
+        .then(response => {
+          const accessToken = response.data.access
+          const refreshToken = response.data.refresh
 
-          window.localStorage.setItem('auth_token', token)
-          window.localStorage.setItem('auth_expiration', expirationDate)
+          window.localStorage.setItem('auth_refresh_token', refreshToken)
 
-          commit('setAuthCredentials', { token })
-          dispatch('setLogoutTimer', expirationDate)
-
-          router.push({ name: 'Dashboard' })
-        }).catch(() => {}) // See axios config for basic error handling
+          dispatch('updateRefreshToken', refreshToken)
+            .then(() => {
+              return dispatch('updateAccessToken', accessToken)
+            })
+            .then(() => {
+              // Go to "home" page
+              router.push({ name: 'Dashboard' })
+            })
+        })
+        .catch(() => {}) // See axios config for basic error handling
     },
-    logout ({ commit, state }) {
-      axios.post(
-        process.env.VUE_APP_API_LOGOUT_URL,
-        { token: state.jsonWebToken }
-      )
-      commit('clearAuthCredentials')
-      commit('clearUserEmail')
-      commit('clearUserName')
-
-      bus.$emit('flash', 'Goodbye! Your session has ended.', 'success')
-
-      window.localStorage.removeItem('auth_token')
-      window.localStorage.removeItem('auth_expiration')
-      router.push({ name: 'Login' })
-    },
-    verify ({ commit, state }) {
-      axios.post(
-        process.env.VUE_APP_API_VERIFY_URL,
-        { token: state.jsonWebToken }
-      ).then(response => {
-        bus.$emit('flash', 'Current token is valid!', 'info')
-      }).catch(() => {
-        bus.$emit('flash', 'Current token is invalid!', 'danger')
+    logout({ commit, state }) {
+      axios.post(process.env.VUE_APP_API_LOGOUT_URL, {
+        refresh: state.jwtRefresh
       })
-    },
-    setLogoutTimer ({ commit }, expirationTime) {
-      setTimeout(() => {
-        commit('clearAuthCredentials')
-      }, expirationTime - new Date())
-    },
-    tryAutoLogin ({ commit }) {
-      const jwt = window.localStorage.getItem('auth_token')
-      if (!jwt) {
-        return
-      }
-      const expirationDate = window.localStorage.getItem('auth_expiration')
-        ? new Date(window.localStorage.getItem('auth_expiration')) : ''
-      const now = new Date()
+      // commit('clearAuthCredentials')
+      // commit('clearUserData')
 
-      if (now >= expirationDate) {
-        window.localStorage.removeItem('auth_token')
-        window.localStorage.removeItem('auth_expiration')
+      // bus.$emit('flash', 'Goodbye! Your session has ended.', 'success')
+      // window.localStorage.removeItem('auth_refresh_token')
+      // router.push({ name: 'Login' })
+    },
+    refresh({ commit, state }) {
+      const refreshToken = state.jwtRefresh
+
+      return axios
+        .post(process.env.VUE_APP_API_REFRESH_URL, {
+          refresh: refreshToken
+        })
+        .then(response => {
+          commit('setAccessToken', response.data.access)
+          bus.$emit('flash', 'Access token is updated')
+        })
+        .catch(() => {
+          throw new Error('Bad refresh token')
+        })
+    },
+    verify({ commit, state }) {
+      axios
+        .post(process.env.VUE_APP_API_VERIFY_URL, {
+          token: state.jwtRefresh
+        })
+        .then(response => {
+          bus.$emit('flash', 'Current token is valid!', 'info')
+        })
+        .catch(() => {
+          bus.$emit('flash', 'Current token is invalid!', 'danger')
+        })
+    },
+    updateAccessToken({ commit, dispatch }, token) {
+      commit('setAccessToken', token)
+
+      // Refresh "access" token when it expires
+      return dispatch('setRefreshTimer', new Date(jwtDecode(token).exp * 1000))
+    },
+    updateRefreshToken({ commit }, token) {
+      commit('setRefreshToken', token)
+    },
+    setRefreshTimer({ state, commit, dispatch }, expirationTime) {
+      clearTimeout(state.timeoutId)
+
+      const timeoutId = setTimeout(() => {
+        bus.$emit('flash', 'Access token is expired')
+        dispatch('refresh')
+      }, expirationTime - new Date())
+
+      commit('updateTimeoutId', timeoutId)
+    },
+    tryAutoLogin({ commit, dispatch }) {
+      const refreshToken = window.localStorage.getItem('auth_refresh_token')
+
+      if (!refreshToken) {
+        return
+      }
+
+      const expirationDate = new Date(jwtDecode(refreshToken).exp * 1000)
+
+      if (new Date() >= expirationDate) {
+        bus.$emit('flash', 'Autologin is failed. Tokes is expired.', 'warning')
+        window.localStorage.removeItem('auth_refresh_token')
         commit('clearAuthCredentials')
         return
       }
-      commit('setAuthCredentials', {
-        token: jwt
+
+      dispatch('updateRefreshToken', refreshToken).then(() => {
+        return dispatch('refresh').then(
+          () => {
+            bus.$emit('flash', 'Autologin => success')
+            router.push({ name: 'Dashboard' })
+          },
+          error => {
+            bus.$emit(
+              'flash',
+              `Autologin failded - ${error.message}`,
+              'warning'
+            )
+          }
+        )
       })
     }
   },
   getters: {
-    isAuthenticated (state) {
-      return state.jsonWebToken !== null
+    isAuthenticated(state) {
+      return state.jwtAccess !== null
     },
-    jsonWebToken (state) {
-      return state.jsonWebToken
+    jwtAccess(state) {
+      return state.jwtAccess
     },
-    userEmail (state) {
-      return state.userEmail
+    userEmail(state) {
+      return state.userData.email
     },
-    userName (state) {
-      return state.userName
+    userName(state) {
+      return state.userData.name
     },
-    hasValidationError: (state) => (input) => {
+    hasValidationError: state => input => {
       return Object.prototype.hasOwnProperty.call(state.formErrors, input)
     },
-    getValidationError: (state) => (input) => {
+    getValidationError: state => input => {
       if (Object.prototype.hasOwnProperty.call(state.formErrors, input)) {
         const error = state.formErrors[input]
-
         return Array.isArray(error) ? error[0] : error
       }
-
       return null
     }
   }

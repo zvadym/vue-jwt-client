@@ -22,19 +22,19 @@ export default {
     flash: FlashMessage
   },
   props: [],
-  data () {
+  data() {
     return {
       alerts: []
     }
   },
   computed: {},
-  created () {
+  created() {
     bus.$on('flash', (message, level) => {
       this.flash(message, level)
     })
   },
   methods: {
-    flash (message, level) {
+    flash(message, level = 'info') {
       this.alerts.push({
         message,
         level,
@@ -42,13 +42,13 @@ export default {
         nonce: this.generateNonce()
       })
     },
-    remove (nonce) {
+    remove(nonce) {
       const index = this.alerts.findIndex(alert => alert.nonce === nonce)
       if (index !== -1) {
         this.alerts.splice(index, 1)
       }
     },
-    generateNonce () {
+    generateNonce() {
       let text = ''
       const possible = 'abcdefghijklmnopqrstuvwxyz0123456789'
       for (let i = 0; i < 6; i += 1) {
@@ -98,7 +98,7 @@ export default {
     position: relative;
     padding: 1em;
     margin-top: 1em;
-    border-radius: .25rem;
+    border-radius: 0.25rem;
     font-size: 1.125rem;
   }
 }

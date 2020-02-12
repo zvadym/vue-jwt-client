@@ -1,18 +1,7 @@
 <template>
-  <div
-    v-show="show"
-    class="alert"
-    :class="level"
-    role="alert"
-  >
-    <div
-      class="dismiss"
-      @click="dismiss"
-    >
-      <icon
-        name="times"
-        class="float-right cursor-pointer mx-2"
-      />
+  <div v-show="show" :class="level" class="alert" role="alert">
+    <div class="dismiss" @click="dismiss">
+      <icon name="times" class="float-right cursor-pointer mx-2" />
     </div>
     {{ body }}
   </div>
@@ -22,15 +11,20 @@
 import 'vue-awesome/icons/times'
 
 export default {
-  props: ['message', 'level', 'nonce', 'delay'],
-  data () {
+  props: {
+    message: String,
+    level: String,
+    nonce: String,
+    delay: Number
+  },
+  data() {
     return {
       body: '',
       type: 'info',
       show: true
     }
   },
-  created () {
+  created() {
     this.body = this.message
     if (this.delay > 0) {
       setTimeout(() => {
@@ -39,7 +33,7 @@ export default {
     }
   },
   methods: {
-    dismiss () {
+    dismiss() {
       this.show = false
       this.$emit('remove', this.nonce)
     }

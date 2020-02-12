@@ -1,7 +1,7 @@
 <template>
   <div>
-    <h1>Login</h1>
     <form class="w-full max-w-sm mx-auto">
+      <h1>Login</h1>
       <div class="md:flex md:items-baseline mb-6">
         <div class="md:w-1/3">
           <label
@@ -17,11 +17,8 @@
             v-model="credentials.email"
             class="bg-grey-lighter appearance-none border-2 border-grey-lighter focus:border-purple rounded w-full py-2 px-4 text-grey-darker"
             type="email"
-          >
-          <p
-            v-if="hasValidationError('email')"
-            class="text-red text-sm mt-1"
-          >
+          />
+          <p v-if="hasValidationError('email')" class="text-red text-sm mt-1">
             {{ getValidationError('email') }}
           </p>
         </div>
@@ -42,7 +39,7 @@
             class="bg-grey-lighter appearance-none border-2 border-grey-lighter focus:border-purple rounded w-full py-2 px-4 text-grey-darker"
             type="password"
             @keydown.enter.prevent="login"
-          >
+          />
         </div>
       </div>
       <div class="md:flex md:items-baseline">
@@ -64,7 +61,7 @@
 <script>
 import { mapGetters, mapMutations } from 'vuex'
 export default {
-  data () {
+  data() {
     return {
       credentials: {
         email: '',
@@ -73,29 +70,24 @@ export default {
     }
   },
   computed: {
-    ...mapGetters('auth', [
-      'hasValidationError',
-      'getValidationError'
-    ])
+    ...mapGetters('auth', ['hasValidationError', 'getValidationError'])
   },
   methods: {
-    forgot () {
+    forgot() {
       this.$router.push({ name: 'ForgotPassword' })
     },
-    login () {
+    login() {
       this.clearFormErrors()
       this.$store.dispatch('auth/login', this.credentials)
     },
-    resetForm () {
+    resetForm() {
       this.credentials = {
         email: '',
         password: ''
       }
       this.clearFormErrors()
     },
-    ...mapMutations('auth', [
-      'clearFormErrors'
-    ])
-  },
+    ...mapMutations('auth', ['clearFormErrors'])
+  }
 }
 </script>
