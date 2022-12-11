@@ -13,7 +13,7 @@
     "axios": "^0.21.1",
     "connect-history-api-fallback": "^1.6.0",
     "core-js": "^2.6.5",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "jwt-decode": "^2.2.0",
     "vue": "^2.6.10",
     "vue-awesome": "^3.5.4",
